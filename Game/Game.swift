@@ -13,7 +13,7 @@ import Foundation
 class Game {
 	private static let minimumTimeBetweenHorizontalMoves: TimeInterval = 0.1
 	private static let minimumTimeBetweenVerticalMoves: TimeInterval = 0.1
-	private static let normalTimeBetweenFalls: TimeInterval = 0.1
+	private static let normalTimeBetweenFalls: TimeInterval = 1.0
 	private static let minimumTimeBetweenRotations: TimeInterval = 0.05
 	static let minPiecePosition = Piece.Position(-4, -4)
 	static let maxPiecePosition = Piece.Position(Board.width, Board.height)
@@ -21,7 +21,7 @@ class Game {
 	static let shared = Game()
 	var state: GameState!
 	
-	let inputMap = PlayerInputMap()
+	let localPlayerInputMap = PlayerInputMap()
 	private var shapeGenerator = Piece.Shape.Generator()
 	
 	
@@ -36,7 +36,7 @@ class Game {
 		
 		let players = [localPlayer] // + [...]
 		state = GameState(players: players, localPlayerID: localPlayer.id)
-		inputMap.reset()
+		localPlayerInputMap.reset()
 		advanceLocalPlayerPiece()
 		advanceLocalPlayerPiece()
 	}
@@ -48,7 +48,9 @@ class Game {
 		state.phase = .playing
 	}
 	
-	
+	func pause() {
+		state.paused = !state.paused
+	}
 	
 	func update(timing: UpdateTiming) {
 		switch state.phase {
@@ -66,7 +68,7 @@ class Game {
 			
 		case .playing:
 			updateLocalPlayer(timing: timing)
-			inputMap.clearActivated()
+			localPlayerInputMap.clearActivated()
 		}
 	}
 	
@@ -76,20 +78,23 @@ class Game {
 		guard state.localPlayer.state.isAlive else {
 			return
 		}
+		guard state.paused == false else {
+			return
+		}
 		
-		if let action = inputMap.rotatingAction() {
+		if let action = localPlayerInputMap.rotatingAction() {
 			actOnFallingPiece(input: action, timing: timing)
 		}
 		
-		if let action = inputMap.horizontalMoveAction() {
+		if let action = localPlayerInputMap.horizontalMoveAction() {
 			actOnFallingPiece(input: action, timing: timing)
 		}
 		
-		if inputMap[.moveDown].activated || inputMap[.moveDown].active {
+		if localPlayerInputMap[.moveDown].activated || localPlayerInputMap[.moveDown].active {
 			actOnFallingPiece(input: .moveDown, timing: timing)
 		}
 		
-		if inputMap[.drop].activated || inputMap[.drop].active {
+		if localPlayerInputMap[.drop].activated || localPlayerInputMap[.drop].active {
 			actOnFallingPiece(input: .drop, timing: timing)
 		}
 		
@@ -257,7 +262,8 @@ struct GameState {
 	var lastFallingTime: TimeInterval = 0.0
 	// -----------------------------------------------------
 	
-	
+	var paused:Bool = false
+
 	init(players: [Player], localPlayerID: PlayerID) {
 		self.localPlayerID = localPlayerID
 		self.players = {

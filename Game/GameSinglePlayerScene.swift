@@ -14,7 +14,9 @@ class GameSinglePlayerScene: SKScene {
 	private var bgNode: SKNode!
 	private var boardNode: BoardNode!
 	private var game = Game.shared
+//	private var nextPieceDisplay = PieceDisplay!
 	
+	private var pausedLabel:SKLabelNode!
 	
 	private var hasLoadedScene = false
 	override func sceneDidLoad() {
@@ -23,6 +25,14 @@ class GameSinglePlayerScene: SKScene {
 		
 		bgNode = childNode(withName: "background")!
 		boardNode = bgNode.childNode(withName: "PlayerBoard") as! BoardNode
+		
+		//initialize the paused label then assign it to the instance property
+		let label = SKLabelNode(text: "Paused")
+		label.fontSize = 188
+		label.toggleBold()
+		label.position = CGPoint(x: self.size.width / 2,
+		                         y: self.size.height / 2)
+		pausedLabel = label
 		
 		lastUpdateTime = 0
 		game.newGame()
@@ -38,17 +48,25 @@ class GameSinglePlayerScene: SKScene {
 	override func keyDown(with event: NSEvent) {
 		switch event.keyCode {
 		case Keycode.a: //ANSI A
-			game.inputMap[.rotateLeft].activated = true
+			game.localPlayerInputMap[.rotateLeft].activated = !(game.state.paused)
 		case Keycode.d: //ANSI D
-			game.inputMap[.rotateRight].activated = true
+			game.localPlayerInputMap[.rotateRight].activated = !(game.state.paused)
 		case Keycode.space:
-			game.inputMap[.drop].activated = true
+			game.localPlayerInputMap[.drop].activated = !(game.state.paused)
 		case Keycode.downArrow:
-			game.inputMap[.moveDown].activated = true
+			game.localPlayerInputMap[.moveDown].activated = !(game.state.paused)
 		case Keycode.leftArrow:
-			game.inputMap[.moveLeft].activated = true
+			game.localPlayerInputMap[.moveLeft].activated = !(game.state.paused)
 		case Keycode.rightArrow:
-			game.inputMap[.moveRight].activated = true			
+			game.localPlayerInputMap[.moveRight].activated = !(game.state.paused)
+		case Keycode.p:
+			game.pause()
+			if game.state.paused {
+				bgNode.addChild(pausedLabel)
+			} else {
+				bgNode.removeChildren(in: [pausedLabel])
+				
+			}
 		default:
 			break
 		}
@@ -80,5 +98,29 @@ class GameSinglePlayerScene: SKScene {
 		
 		boardNode.board = game.state.localPlayer.state.board
 		boardNode.fallingPiece = game.state.localPlayer.state.currentPiece
+	}
+}
+
+
+//add a bold computed property to the SKLabelNode
+
+extension SKLabelNode {
+	func toggleBold()
+	{
+		guard (fontName != nil) else {
+			print("SKLabelNode attempting to set fontName when fontName isn't set")
+			return
+		}
+		if isBold {
+			self.fontName = self.fontName?.replacingOccurrences(of: "-Bold", with: "")
+		} else {
+			self.fontName = self.fontName! + "-Bold"
+		}
+	}
+	var isBold:Bool {
+		get {
+			guard (fontName != nil) else { return false }
+			return (fontName?.contains("-Bold"))!
+		}
 	}
 }
